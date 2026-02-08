@@ -9,7 +9,7 @@ import AnalysisInterface from './components/AnalysisInterface'
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'chat' | 'analyze'>('chat')
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{id: string; email?: string} | null>(null)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
 

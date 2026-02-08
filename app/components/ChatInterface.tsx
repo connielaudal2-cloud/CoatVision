@@ -73,9 +73,10 @@ export default function ChatInterface() {
         role: 'assistant', 
         content: data.assistant.content
       }])
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as Error
       console.error('Chat error:', err)
-      setError(err.message || 'Failed to send message. Please try again.')
+      setError(error.message || 'Failed to send message. Please try again.')
       // Remove the user message if there was an error
       setMessages(prev => prev.slice(0, -1))
     } finally {

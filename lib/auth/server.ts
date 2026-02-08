@@ -25,7 +25,9 @@ export async function ensureProfile(userId: string, email?: string) {
   const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
   
   // Use upsert pattern to create or update profile
-  const { data: profile, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabaseAny: any = supabase
+  const { data: profile, error } = await supabaseAny
     .from('profiles')
     .upsert({
       id: userId,

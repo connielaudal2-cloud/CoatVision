@@ -248,14 +248,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Save analysis to database
-    const { data: analysis, error: analysisError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabaseAny: any = supabase
+    const { data: analysis, error: analysisError } = await supabaseAny
       .from('analyses')
       .insert({
         user_id: user.id,
         image_url: imageUrl,
         overlay_url: overlayUrl,
-        labels: labels as unknown as Database['public']['Tables']['analyses']['Insert']['labels'],
-        stats: stats as unknown as Database['public']['Tables']['analyses']['Insert']['stats'],
+        labels: JSON.parse(JSON.stringify(labels)),
+        stats: JSON.parse(JSON.stringify(stats)),
         status: overlayUrl ? 'completed' : 'completed_no_overlay'
       })
       .select()

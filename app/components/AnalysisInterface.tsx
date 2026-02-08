@@ -70,9 +70,10 @@ export default function AnalysisInterface() {
       } else {
         setResult(data)
       }
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as Error
       console.error('Analysis error:', err)
-      setError(err.message || 'Failed to analyze image. Please try again.')
+      setError(error.message || 'Failed to analyze image. Please try again.')
       setResult({
         imageUrl: preview || '',
         overlayUrl: null,
