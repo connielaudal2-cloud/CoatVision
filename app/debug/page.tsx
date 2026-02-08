@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 interface HealthResponse {
   ok: boolean
@@ -39,11 +40,11 @@ export default function DebugPage() {
         
         setDiagnostics(prev => ({ ...prev, health: healthData, loading: false }))
         
-      } catch (error: any) {
+      } catch (error) {
         setDiagnostics(prev => ({
           ...prev,
           loading: false,
-          error: error.message || 'Failed to run diagnostics'
+          error: error instanceof Error ? error.message : 'Failed to run diagnostics'
         }))
       }
     }
@@ -146,7 +147,7 @@ export default function DebugPage() {
             <ol className="list-decimal list-inside space-y-2 text-gray-600 ml-2">
               <li>Go to <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">vercel.com</a></li>
               <li>Navigate to your CoatVision project</li>
-              <li>Click on the "Deployments" tab</li>
+              <li>Click on the &quot;Deployments&quot; tab</li>
               <li>Select the latest deployment</li>
               <li>View the build logs and runtime logs</li>
             </ol>
@@ -165,12 +166,12 @@ export default function DebugPage() {
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
           <div className="space-y-3">
-            <a
+            <Link
               href="/"
               className="block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"
             >
               Return to Home
-            </a>
+            </Link>
             <button
               onClick={() => window.location.reload()}
               className="block w-full text-center bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition"

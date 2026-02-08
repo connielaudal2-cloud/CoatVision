@@ -104,6 +104,15 @@ export default function AnalysisInterface() {
           <p className="font-semibold">Error:</p>
           <p>{error}</p>
           {result?.details && <p className="text-sm mt-2">{result.details}</p>}
+          {(error.includes('environment') || error.includes('configured') || error.includes('Database') || error.includes('configuration')) && (
+            <p className="text-sm mt-2">
+              💡 Need help? Check the{' '}
+              <a href="/debug" className="underline font-semibold hover:text-red-900">
+                diagnostics page
+              </a>{' '}
+              for configuration status.
+            </p>
+          )}
         </div>
       )}
 

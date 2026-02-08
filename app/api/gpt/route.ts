@@ -13,10 +13,11 @@ export async function POST(request: NextRequest) {
     let env
     try {
       env = getEnvConfig(true)
-    } catch (envError: any) {
-      console.error('Environment validation failed:', envError.message)
+    } catch (envError) {
+      const errorMessage = envError instanceof Error ? envError.message : 'Environment validation failed'
+      console.error('Environment validation failed:', errorMessage)
       return NextResponse.json(
-        { ok: false, error: envError.message },
+        { ok: false, error: errorMessage },
         { status: 500 }
       )
     }
