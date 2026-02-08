@@ -7,6 +7,25 @@ import { getEnvConfig } from '@/lib/env'
 
 export const runtime = 'nodejs'
 
+// CoatVision GPT System Prompt
+const SYSTEM_PROMPT = `You are CoatVision GPT, an expert assistant specialized in coating and detailing.
+
+Your expertise includes:
+- Automotive coatings, ceramic coatings, paint protection films
+- Coating application techniques and best practices
+- Surface preparation and inspection
+- Coating curing conditions and timelines
+- Defect identification and troubleshooting
+- Professional detailing workflows
+
+Guidelines:
+- Keep responses concise and precise (2-3 short paragraphs max)
+- Ask clarifying questions when needed (max 3 questions)
+- Stay focused on coating and detailing topics
+- If asked about unrelated topics, politely redirect to coating/detailing
+- Use professional but friendly tone
+- Provide actionable advice when possible`
+
 export async function POST(request: NextRequest) {
   try {
     // Validate environment variables first (fail-fast)
@@ -62,7 +81,7 @@ export async function POST(request: NextRequest) {
         .insert({
           user_id: user.id,
           title: message.substring(0, 50)
-        } as any)
+        })
         .select()
         .single()
 
@@ -74,7 +93,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      currentChatId = (newChat as any)?.id
+      currentChatId = newChat.id
     }
 
     // Save user message
@@ -84,7 +103,7 @@ export async function POST(request: NextRequest) {
         chat_id: currentChatId,
         role: 'user',
         content: message
-      } as any)
+      })
 
     if (userMessageError) {
       console.error('User message save error:', userMessageError)
@@ -109,14 +128,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Prepare messages for OpenAI with system prompt
+    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }))
+    ]
+
     // Call OpenAI API
     try {
       const completion = await openai.chat.completions.create({
         model: env.openaiModel!,
-        messages: (messages as any[]).map(msg => ({
-          role: msg.role as 'user' | 'assistant' | 'system',
-          content: msg.content
-        }))
+        messages: openaiMessages,
+        temperature: 0.7,
+        max_tokens: 500
       })
 
       const assistantMessage = completion.choices[0]?.message?.content || 'No response'
@@ -128,7 +155,7 @@ export async function POST(request: NextRequest) {
           chat_id: currentChatId,
           role: 'assistant',
           content: assistantMessage
-        } as any)
+        })
 
       if (assistantMessageError) {
         console.error('Assistant message save error:', assistantMessageError)
@@ -138,9 +165,9 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Update chat title if it's the first message
+      // Update chat title if it's the first user message
       if (messages.length === 1) {
-        await (supabase as any)
+        await supabase
           .from('chats')
           .update({ title: message.substring(0, 50) })
           .eq('id', currentChatId)
@@ -155,16 +182,18 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    } catch (openaiError: any) {
+    } catch (openaiError) {
       console.error('OpenAI API error:', openaiError)
       
+      const error = openaiError as { code?: string; message?: string }
       let errorMessage = 'Failed to get response from AI'
-      if (openaiError.code === 'insufficient_quota') {
+      
+      if (error.code === 'insufficient_quota') {
         errorMessage = 'OpenAI API quota exceeded. Please contact support.'
-      } else if (openaiError.code === 'invalid_api_key') {
+      } else if (error.code === 'invalid_api_key') {
         errorMessage = 'OpenAI API key is invalid. Please contact support.'
-      } else if (openaiError.message) {
-        errorMessage = `AI service error: ${openaiError.message}`
+      } else if (error.message) {
+        errorMessage = `AI service error: ${error.message}`
       }
       
       return NextResponse.json(
@@ -173,10 +202,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('GPT API error:', error)
+    const err = error as Error
     return NextResponse.json(
-      { ok: false, error: 'Internal server error', details: error.message },
+      { ok: false, error: 'Internal server error', details: err.message },
       { status: 500 }
     )
   }

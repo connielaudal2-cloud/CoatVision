@@ -7,10 +7,11 @@ export async function POST() {
     await supabase.auth.signOut()
     
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    console.error('Logout error:', error)
+  } catch (error) {
+    const err = error as Error
+    console.error('Logout error:', err)
     return NextResponse.json(
-      { error: error.message || 'Failed to logout' },
+      { error: err.message || 'Failed to logout' },
       { status: 500 }
     )
   }

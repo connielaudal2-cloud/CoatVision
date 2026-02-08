@@ -31,7 +31,7 @@ export async function ensureProfile(userId: string, email?: string) {
       id: userId,
       email: email || null,
       updated_at: new Date().toISOString(),
-    } as any, {
+    }, {
       onConflict: 'id'
     })
     .select()
