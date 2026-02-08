@@ -2,6 +2,38 @@
 
 AI-powered coating analysis and chat assistant built with Next.js, Supabase, and OpenAI.
 
+## 🚀 Quick Start
+
+### For Production Deployment
+
+**→ See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete Vercel deployment guide**
+
+**→ See [ENV_SETUP.md](./ENV_SETUP.md) for environment variables setup**
+
+**→ See [MOBILE_DEPLOYMENT.md](./MOBILE_DEPLOYMENT.md) for App Store deployment**
+
+### For Local Development
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/connielaudal2-cloud/CoatVision.git
+cd CoatVision
+
+# 2. Install dependencies
+npm install
+
+# 3. Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your actual credentials
+
+# 4. Run development server
+npm run dev
+
+# 5. Open http://localhost:3000
+```
+
+---
+
 ## Features
 
 - **Authentication**: Secure email/password authentication via Supabase Auth with SSR
@@ -198,17 +230,74 @@ Health check endpoint.
 
 ## Deployment
 
-This application is optimized for Vercel deployment:
+### 🚀 Vercel Deployment (Recommended)
 
-1. Push your code to a Git repository
-2. Import the project in Vercel
-3. Add environment variables in Vercel project settings:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `OPENAI_API_KEY`
-   - `OPENAI_MODEL` (optional)
-4. Deploy
+**Complete guide**: [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+**Quick Steps**:
+
+1. **Prepare Environment Variables**
+   - See [ENV_SETUP.md](./ENV_SETUP.md) for detailed setup
+   - Get Supabase keys from your dashboard
+   - Get OpenAI API key from platform.openai.com
+
+2. **Deploy to Vercel**
+   ```bash
+   # Option 1: Via Vercel Dashboard (easiest)
+   # - Go to vercel.com
+   # - Import your GitHub repository
+   # - Add environment variables
+   # - Deploy
+   
+   # Option 2: Via Vercel CLI
+   npm i -g vercel
+   vercel login
+   vercel
+   ```
+
+3. **Configure Supabase**
+   - Add your Vercel URL to Supabase redirect URLs
+   - Test authentication and features
+
+**Required Environment Variables**:
+- `NEXT_PUBLIC_SUPABASE_URL` (public)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public)
+- `SUPABASE_SERVICE_ROLE_KEY` (secret)
+- `OPENAI_API_KEY` (secret)
+- `OPENAI_MODEL` (optional, default: gpt-4o-mini)
+
+### 📱 Mobile Deployment (App Store & Play Store)
+
+**Complete guide**: [MOBILE_DEPLOYMENT.md](./MOBILE_DEPLOYMENT.md)
+
+Three options for mobile deployment:
+1. **Progressive Web App (PWA)** - Fastest (1-2 days)
+2. **Capacitor** - Recommended (2-3 weeks)
+3. **React Native** - Full rewrite (2-3 months)
+
+### ✅ Deployment Checklist
+
+Before deploying:
+
+- [ ] All environment variables configured
+- [ ] `npm run build` passes locally
+- [ ] Supabase database migration ran successfully
+- [ ] Authentication tested locally
+- [ ] Chat functionality tested locally
+- [ ] Image analysis tested locally
+- [ ] Health endpoint returns 200 OK
+- [ ] No secrets in Git repository
+- [ ] `.env.local` in `.gitignore`
+
+After deploying:
+
+- [ ] Vercel build succeeded
+- [ ] Health check works: `/api/health`
+- [ ] Sign up flow works
+- [ ] Login flow works
+- [ ] Chat sends and receives messages
+- [ ] Image analysis processes images
+- [ ] All error messages are user-friendly
 
 The application includes:
 - Next.js App Router with Node.js runtime
@@ -216,6 +305,7 @@ The application includes:
 - Static and dynamic rendering
 - Edge-ready configuration
 - Proper error handling and user feedback
+- Cookie-based authentication with @supabase/ssr
 
 ## Security
 
