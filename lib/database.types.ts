@@ -85,6 +85,7 @@ export interface Database {
           user_id: string
           image_url: string
           overlay_url: string | null
+          labels: Json
           stats: Json
           status: string
         }
@@ -94,6 +95,7 @@ export interface Database {
           user_id: string
           image_url: string
           overlay_url?: string | null
+          labels?: Json
           stats?: Json
           status?: string
         }
@@ -103,6 +105,7 @@ export interface Database {
           user_id?: string
           image_url?: string
           overlay_url?: string | null
+          labels?: Json
           stats?: Json
           status?: string
         }

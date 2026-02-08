@@ -73,9 +73,10 @@ export default function ChatInterface() {
         role: 'assistant', 
         content: data.assistant.content
       }])
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as Error
       console.error('Chat error:', err)
-      setError(err.message || 'Failed to send message. Please try again.')
+      setError(error.message || 'Failed to send message. Please try again.')
       // Remove the user message if there was an error
       setMessages(prev => prev.slice(0, -1))
     } finally {
@@ -106,6 +107,15 @@ export default function ChatInterface() {
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
           <p className="font-semibold">Error:</p>
           <p>{error}</p>
+          {(error.includes('environment') || error.includes('configured') || error.includes('API key')) && (
+            <p className="text-sm mt-2">
+              💡 Need help? Check the{' '}
+              <a href="/debug" className="underline font-semibold hover:text-red-900">
+                diagnostics page
+              </a>{' '}
+              for configuration status.
+            </p>
+          )}
         </div>
       )}
 

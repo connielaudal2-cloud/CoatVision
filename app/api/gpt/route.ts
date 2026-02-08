@@ -3,11 +3,44 @@ import OpenAI from 'openai'
 import { getUser, ensureProfile } from '@/lib/auth/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
+import { getEnvConfig } from '@/lib/env'
 
 export const runtime = 'nodejs'
 
+// CoatVision GPT System Prompt
+const SYSTEM_PROMPT = `You are CoatVision GPT, an expert assistant specialized in coating and detailing.
+
+Your expertise includes:
+- Automotive coatings, ceramic coatings, paint protection films
+- Coating application techniques and best practices
+- Surface preparation and inspection
+- Coating curing conditions and timelines
+- Defect identification and troubleshooting
+- Professional detailing workflows
+
+Guidelines:
+- Keep responses concise and precise (2-3 short paragraphs max)
+- Ask clarifying questions when needed (max 3 questions)
+- Stay focused on coating and detailing topics
+- If asked about unrelated topics, politely redirect to coating/detailing
+- Use professional but friendly tone
+- Provide actionable advice when possible`
+
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables first (fail-fast)
+    let env
+    try {
+      env = getEnvConfig(true)
+    } catch (envError) {
+      const errorMessage = envError instanceof Error ? envError.message : 'Environment validation failed'
+      console.error('Environment validation failed:', errorMessage)
+      return NextResponse.json(
+        { ok: false, error: errorMessage },
+        { status: 500 }
+      )
+    }
+
     // Verify user authentication
     const user = await getUser()
     if (!user) {
@@ -28,52 +61,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check OpenAI API key - strict validation, no fallback
-    const openaiKey = process.env.OPENAI_API_KEY
-    if (!openaiKey) {
-      console.error('OPENAI_API_KEY environment variable is not set')
-      return NextResponse.json(
-        { ok: false, error: 'OpenAI API key is not configured. Please contact support.' },
-        { status: 500 }
-      )
-    }
-
-    // Initialize OpenAI client
+    // Initialize OpenAI client with validated config
     const openai = new OpenAI({
-      apiKey: openaiKey
+      apiKey: env.openaiApiKey!
     })
-
-    // Get model from env or use modern default
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
 
     // Ensure user profile exists
     await ensureProfile(user.id, user.email)
 
-    // Validate Supabase environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Missing Supabase environment variables')
-      return NextResponse.json(
-        { ok: false, error: 'Database configuration error' },
-        { status: 500 }
-      )
-    }
-
     // Use service role key for database operations
-    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
+    const supabase = createClient<Database>(env.supabaseUrl, env.supabaseServiceRoleKey!)
 
     let currentChatId = chatId
 
     // Create new chat if needed
     if (!currentChatId) {
-      const { data: newChat, error: chatError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabaseAny: any = supabase
+      const { data: newChat, error: chatError } = await supabaseAny
         .from('chats')
         .insert({
           user_id: user.id,
           title: message.substring(0, 50)
-        } as any)
+        })
         .select()
         .single()
 
@@ -85,17 +95,19 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      currentChatId = (newChat as any)?.id
+      currentChatId = newChat.id
     }
 
     // Save user message
-    const { error: userMessageError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabaseAny: any = supabase
+    const { error: userMessageError } = await supabaseAny
       .from('messages')
       .insert({
         chat_id: currentChatId,
         role: 'user',
         content: message
-      } as any)
+      })
 
     if (userMessageError) {
       console.error('User message save error:', userMessageError)
@@ -120,26 +132,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Prepare messages for OpenAI with system prompt
+    const messageList = (messages || []) as Array<{ role: string; content: string }>
+    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messageList.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }))
+    ]
+
     // Call OpenAI API
     try {
       const completion = await openai.chat.completions.create({
-        model,
-        messages: (messages as any[]).map(msg => ({
-          role: msg.role as 'user' | 'assistant' | 'system',
-          content: msg.content
-        }))
+        model: env.openaiModel!,
+        messages: openaiMessages,
+        temperature: 0.7,
+        max_tokens: 500
       })
 
       const assistantMessage = completion.choices[0]?.message?.content || 'No response'
 
       // Save assistant message
-      const { error: assistantMessageError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabaseAny2: any = supabase
+      const { error: assistantMessageError } = await supabaseAny2
         .from('messages')
         .insert({
           chat_id: currentChatId,
           role: 'assistant',
           content: assistantMessage
-        } as any)
+        })
 
       if (assistantMessageError) {
         console.error('Assistant message save error:', assistantMessageError)
@@ -149,9 +172,11 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Update chat title if it's the first message
-      if (messages.length === 1) {
-        await (supabase as any)
+      // Update chat title if it's the first user message
+      if (messageList.length === 1) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const supabaseAny3: any = supabase
+        await supabaseAny3
           .from('chats')
           .update({ title: message.substring(0, 50) })
           .eq('id', currentChatId)
@@ -166,16 +191,18 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    } catch (openaiError: any) {
+    } catch (openaiError) {
       console.error('OpenAI API error:', openaiError)
       
+      const error = openaiError as { code?: string; message?: string }
       let errorMessage = 'Failed to get response from AI'
-      if (openaiError.code === 'insufficient_quota') {
+      
+      if (error.code === 'insufficient_quota') {
         errorMessage = 'OpenAI API quota exceeded. Please contact support.'
-      } else if (openaiError.code === 'invalid_api_key') {
+      } else if (error.code === 'invalid_api_key') {
         errorMessage = 'OpenAI API key is invalid. Please contact support.'
-      } else if (openaiError.message) {
-        errorMessage = `AI service error: ${openaiError.message}`
+      } else if (error.message) {
+        errorMessage = `AI service error: ${error.message}`
       }
       
       return NextResponse.json(
@@ -184,10 +211,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('GPT API error:', error)
+    const err = error as Error
     return NextResponse.json(
-      { ok: false, error: 'Internal server error', details: error.message },
+      { ok: false, error: 'Internal server error', details: err.message },
       { status: 500 }
     )
   }

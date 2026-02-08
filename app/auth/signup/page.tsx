@@ -48,8 +48,9 @@ export default function SignupPage() {
           router.push('/auth/login')
         }, 2000)
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign up')
+    } catch (err) {
+      const error = err as Error
+      setError(error.message || 'Failed to sign up')
     } finally {
       setLoading(false)
     }

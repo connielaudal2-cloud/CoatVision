@@ -15,10 +15,11 @@ export async function POST() {
     await ensureProfile(user.id, user.email)
     
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    console.error('Ensure profile error:', error)
+  } catch (error) {
+    const err = error as Error
+    console.error('Ensure profile error:', err)
     return NextResponse.json(
-      { error: error.message || 'Failed to ensure profile' },
+      { error: err.message || 'Failed to ensure profile' },
       { status: 500 }
     )
   }

@@ -70,9 +70,10 @@ export default function AnalysisInterface() {
       } else {
         setResult(data)
       }
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as Error
       console.error('Analysis error:', err)
-      setError(err.message || 'Failed to analyze image. Please try again.')
+      setError(error.message || 'Failed to analyze image. Please try again.')
       setResult({
         imageUrl: preview || '',
         overlayUrl: null,
@@ -104,6 +105,15 @@ export default function AnalysisInterface() {
           <p className="font-semibold">Error:</p>
           <p>{error}</p>
           {result?.details && <p className="text-sm mt-2">{result.details}</p>}
+          {(error.includes('environment') || error.includes('configured') || error.includes('Database') || error.includes('configuration')) && (
+            <p className="text-sm mt-2">
+              💡 Need help? Check the{' '}
+              <a href="/debug" className="underline font-semibold hover:text-red-900">
+                diagnostics page
+              </a>{' '}
+              for configuration status.
+            </p>
+          )}
         </div>
       )}
 
