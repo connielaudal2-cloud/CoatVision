@@ -18,7 +18,7 @@ export default function ChatInterface() {
     if (typeof window !== 'undefined') {
       let id = localStorage.getItem('userId')
       if (!id) {
-        id = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        id = `user-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
         localStorage.setItem('userId', id)
       }
       return id
