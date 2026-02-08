@@ -3,6 +3,7 @@ import { getUser, ensureProfile } from '@/lib/auth/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 import sharp from 'sharp'
+import { getEnvConfig } from '@/lib/env'
 
 export const runtime = 'nodejs'
 
@@ -42,11 +43,23 @@ function generateRegions(width: number, height: number, count: number) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables first (fail-fast)
+    let env
+    try {
+      env = getEnvConfig(true)
+    } catch (envError: any) {
+      console.error('Environment validation failed:', envError.message)
+      return NextResponse.json(
+        { ok: false, error: envError.message },
+        { status: 500 }
+      )
+    }
+
     // Verify user authentication
     const user = await getUser()
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required. Please log in.' },
+        { ok: false, error: 'Authentication required. Please log in.' },
         { status: 401 }
       )
     }
@@ -57,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!image) {
       return NextResponse.json(
-        { error: 'Image is required' },
+        { ok: false, error: 'Image is required' },
         { status: 400 }
       )
     }
@@ -65,20 +78,8 @@ export async function POST(request: NextRequest) {
     // Ensure user profile exists
     await ensureProfile(user.id, user.email)
 
-    // Validate Supabase environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Missing Supabase environment variables')
-      return NextResponse.json(
-        { error: 'Database configuration error' },
-        { status: 500 }
-      )
-    }
-
     // Use service role key for database operations
-    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
+    const supabase = createClient<Database>(env.supabaseUrl, env.supabaseServiceRoleKey!)
 
     // Convert image to buffer
     const imageBuffer = Buffer.from(await image.arrayBuffer())
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error('Image upload error:', uploadError)
       return NextResponse.json(
-        { error: 'Failed to upload image' },
+        { ok: false, error: 'Failed to upload image' },
         { status: 500 }
       )
     }
@@ -208,6 +209,7 @@ export async function POST(request: NextRequest) {
 
     // Always return a result
     return NextResponse.json({
+      ok: true,
       id: (analysis as any)?.id,
       imageUrl: imageUrl,
       overlayUrl: overlayUrl,
@@ -221,6 +223,7 @@ export async function POST(request: NextRequest) {
     
     // Always return a result even on error
     return NextResponse.json({
+      ok: false,
       error: 'Analysis processing error',
       details: error.message,
       stats: {

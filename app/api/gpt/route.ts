@@ -3,11 +3,24 @@ import OpenAI from 'openai'
 import { getUser, ensureProfile } from '@/lib/auth/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
+import { getEnvConfig } from '@/lib/env'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables first (fail-fast)
+    let env
+    try {
+      env = getEnvConfig(true)
+    } catch (envError: any) {
+      console.error('Environment validation failed:', envError.message)
+      return NextResponse.json(
+        { ok: false, error: envError.message },
+        { status: 500 }
+      )
+    }
+
     // Verify user authentication
     const user = await getUser()
     if (!user) {
@@ -28,41 +41,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check OpenAI API key - strict validation, no fallback
-    const openaiKey = process.env.OPENAI_API_KEY
-    if (!openaiKey) {
-      console.error('OPENAI_API_KEY environment variable is not set')
-      return NextResponse.json(
-        { ok: false, error: 'OpenAI API key is not configured. Please contact support.' },
-        { status: 500 }
-      )
-    }
-
-    // Initialize OpenAI client
+    // Initialize OpenAI client with validated config
     const openai = new OpenAI({
-      apiKey: openaiKey
+      apiKey: env.openaiApiKey!
     })
-
-    // Get model from env or use modern default
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
 
     // Ensure user profile exists
     await ensureProfile(user.id, user.email)
 
-    // Validate Supabase environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Missing Supabase environment variables')
-      return NextResponse.json(
-        { ok: false, error: 'Database configuration error' },
-        { status: 500 }
-      )
-    }
-
     // Use service role key for database operations
-    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
+    const supabase = createClient<Database>(env.supabaseUrl, env.supabaseServiceRoleKey!)
 
     let currentChatId = chatId
 
@@ -123,7 +111,7 @@ export async function POST(request: NextRequest) {
     // Call OpenAI API
     try {
       const completion = await openai.chat.completions.create({
-        model,
+        model: env.openaiModel!,
         messages: (messages as any[]).map(msg => ({
           role: msg.role as 'user' | 'assistant' | 'system',
           content: msg.content
