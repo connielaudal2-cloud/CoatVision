@@ -2,6 +2,16 @@
 
 AI-powered coating analysis and chat assistant built with Next.js, Supabase, and OpenAI.
 
+## 🚀 Deploy Now (One Click)
+
+**Not deployed yet?** Click here to deploy in 15 minutes:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fconnielaudal2-cloud%2FCoatVision&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY&envDescription=Required%20API%20keys%20for%20CoatVision&envLink=https%3A%2F%2Fgithub.com%2Fconnielaudal2-cloud%2FCoatVision%2Fblob%2Fmain%2FENV_SETUP.md&project-name=coatvision&repository-name=coatvision)
+
+**→ Follow the simple 3-step guide: [ONE_CLICK_DEPLOY.md](./ONE_CLICK_DEPLOY.md)**
+
+---
+
 ## 🚀 Quick Start
 
 ### For Production Deployment
