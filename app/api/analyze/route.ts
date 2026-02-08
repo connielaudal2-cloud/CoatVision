@@ -58,7 +58,7 @@ function generateRegions(width: number, height: number, count: number): Region[]
       height: Math.floor(h),
       color,
       type: colorKey,
-      area: Math.floor(w * h)
+      area: Math.floor(w) * Math.floor(h)
     })
   }
   

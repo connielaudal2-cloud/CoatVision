@@ -16,8 +16,6 @@ interface HealthResponse {
 
 interface DiagnosticsState {
   health: HealthResponse | null
-  supabaseTest: { ok: boolean; message: string } | null
-  openaiTest: { ok: boolean; message: string } | null
   loading: boolean
   error: string | null
 }
