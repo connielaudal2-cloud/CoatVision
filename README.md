@@ -2,6 +2,17 @@
 
 AI-powered coating analysis and chat assistant built with Next.js, Supabase, and OpenAI.
 
+## 📊 Repository Organization
+
+**New to this repo?** Check these guides:
+- **[REPOSITORY_OVERVIEW.md](./REPOSITORY_OVERVIEW.md)** - Quick visual overview
+- **[GITHUB_VERCEL_AUDIT.md](./GITHUB_VERCEL_AUDIT.md)** - Detailed audit report (English)
+- **[OPPRYDDING_GUIDE.md](./OPPRYDDING_GUIDE.md)** - Cleanup guide (Norsk)
+
+**Status**: ✅ Repository is well-organized - only 1 repo, 3 branches, 1 open PR. No cleanup needed!
+
+---
+
 ## 🚀 Deploy Now (One Click)
 
 **Not deployed yet?** Click here to deploy in 15 minutes:
