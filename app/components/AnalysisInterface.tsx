@@ -10,6 +10,7 @@ interface AnalysisResult {
     detected_defects: number
     confidence: number
     processing_time_ms: number
+    regions?: Array<{ type: string; area: number }>
   }
   status: string
   error?: string
@@ -22,18 +23,6 @@ export default function AnalysisInterface() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [userId] = useState(() => {
-    // Generate a simple user ID for demo purposes
-    if (typeof window !== 'undefined') {
-      let id = localStorage.getItem('userId')
-      if (!id) {
-        id = `user-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
-        localStorage.setItem('userId', id)
-      }
-      return id
-    }
-    return 'anonymous'
-  })
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -64,7 +53,6 @@ export default function AnalysisInterface() {
     try {
       const formData = new FormData()
       formData.append('image', selectedFile)
-      formData.append('userId', userId)
 
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -76,7 +64,6 @@ export default function AnalysisInterface() {
       // Always set result, even if there's an error
       if (!response.ok) {
         setError(data.error || 'Analysis failed')
-        // Still show the result structure if available
         if (data.stats) {
           setResult(data)
         }
@@ -86,7 +73,6 @@ export default function AnalysisInterface() {
     } catch (err: any) {
       console.error('Analysis error:', err)
       setError(err.message || 'Failed to analyze image. Please try again.')
-      // Set a fallback result
       setResult({
         imageUrl: preview || '',
         overlayUrl: null,
@@ -182,7 +168,7 @@ export default function AnalysisInterface() {
                 className="max-w-full h-auto max-h-64 mx-auto rounded"
               />
             </div>
-            {result.overlayUrl && (
+            {result.overlayUrl ? (
               <div className="border border-gray-300 rounded-lg p-4">
                 <h3 className="font-semibold mb-2">Analysis Overlay:</h3>
                 <img
@@ -190,6 +176,13 @@ export default function AnalysisInterface() {
                   alt="Overlay"
                   className="max-w-full h-auto max-h-64 mx-auto rounded"
                 />
+              </div>
+            ) : (
+              <div className="border border-gray-300 rounded-lg p-4 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-500">
+                  <p className="font-semibold">No overlay available</p>
+                  <p className="text-sm mt-2">Analysis completed without overlay generation</p>
+                </div>
               </div>
             )}
           </div>
@@ -216,10 +209,22 @@ export default function AnalysisInterface() {
                 </p>
               </div>
             </div>
+            {result.stats.regions && result.stats.regions.length > 0 && (
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Detected Regions:</h4>
+                <div className="space-y-1">
+                  {result.stats.regions.map((region, idx) => (
+                    <div key={idx} className="text-sm bg-white p-2 rounded border border-gray-200">
+                      <span className="font-medium">{region.type}</span>: {region.area.toFixed(0)}px²
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-4">
               <p className="text-sm">
                 <span className="font-semibold">Status:</span>{' '}
-                <span className={result.status === 'completed' ? 'text-green-600' : 'text-red-600'}>
+                <span className={result.status.includes('completed') ? 'text-green-600' : 'text-red-600'}>
                   {result.status}
                 </span>
               </p>

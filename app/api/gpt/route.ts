@@ -1,62 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { supabase } from '@/lib/supabase'
+import { getUser, ensureProfile } from '@/lib/auth/server'
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
+
+export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify user authentication
+    const user = await getUser()
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, error: 'Authentication required. Please log in.' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
-    const { chatId, message, userId, isNewChat } = body
+    const { chatId, message } = body
 
     // Validate required fields
-    if (!userId) {
+    if (!message) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { ok: false, error: 'Message is required' },
         { status: 400 }
       )
     }
 
-    if (!message) {
+    // Check OpenAI API key
+    const openaiKey = process.env.OPENAI_API_KEY
+    if (!openaiKey) {
       return NextResponse.json(
-        { error: 'Message is required' },
-        { status: 400 }
+        { ok: false, error: 'OpenAI API key is not configured. Please contact support.' },
+        { status: 500 }
       )
     }
 
     // Initialize OpenAI client
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || 'placeholder-key'
+      apiKey: openaiKey
     })
 
+    // Get model from env or use default
+    const model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo'
+
     // Ensure user profile exists
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .single()
+    await ensureProfile(user.id, user.email)
 
-    if (profileError || !profile) {
-      // Create profile if it doesn't exist
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({ id: userId } as any)
-
-      if (insertError) {
-        console.error('Profile creation error:', insertError)
-        return NextResponse.json(
-          { error: 'Failed to create user profile' },
-          { status: 500 }
-        )
-      }
-    }
+    // Use service role key for database operations
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
 
     let currentChatId = chatId
 
     // Create new chat if needed
-    if (isNewChat || !currentChatId) {
+    if (!currentChatId) {
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
         .insert({
-          user_id: userId,
+          user_id: user.id,
           title: message.substring(0, 50)
         } as any)
         .select()
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
       if (chatError) {
         console.error('Chat creation error:', chatError)
         return NextResponse.json(
-          { error: 'Failed to create chat' },
+          { ok: false, error: 'Failed to create chat' },
           { status: 500 }
         )
       }
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
     if (userMessageError) {
       console.error('User message save error:', userMessageError)
       return NextResponse.json(
-        { error: 'Failed to save user message' },
+        { ok: false, error: 'Failed to save user message' },
         { status: 500 }
       )
     }
@@ -100,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (messagesError) {
       console.error('Messages fetch error:', messagesError)
       return NextResponse.json(
-        { error: 'Failed to fetch chat history' },
+        { ok: false, error: 'Failed to fetch chat history' },
         { status: 500 }
       )
     }
@@ -108,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Call OpenAI API
     try {
       const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model,
         messages: (messages as any[]).map(msg => ({
           role: msg.role as 'user' | 'assistant' | 'system',
           content: msg.content
@@ -129,24 +133,42 @@ export async function POST(request: NextRequest) {
       if (assistantMessageError) {
         console.error('Assistant message save error:', assistantMessageError)
         return NextResponse.json(
-          { error: 'Failed to save assistant message' },
+          { ok: false, error: 'Failed to save assistant message' },
           { status: 500 }
         )
       }
 
+      // Update chat title if it's the first message
+      if (messages.length === 1) {
+        await (supabase as any)
+          .from('chats')
+          .update({ title: message.substring(0, 50) })
+          .eq('id', currentChatId)
+      }
+
       return NextResponse.json({
+        ok: true,
         chatId: currentChatId,
-        message: assistantMessage,
-        success: true
+        assistant: {
+          role: 'assistant',
+          content: assistantMessage
+        }
       })
 
     } catch (openaiError: any) {
       console.error('OpenAI API error:', openaiError)
+      
+      let errorMessage = 'Failed to get response from AI'
+      if (openaiError.code === 'insufficient_quota') {
+        errorMessage = 'OpenAI API quota exceeded. Please contact support.'
+      } else if (openaiError.code === 'invalid_api_key') {
+        errorMessage = 'OpenAI API key is invalid. Please contact support.'
+      } else if (openaiError.message) {
+        errorMessage = `AI service error: ${openaiError.message}`
+      }
+      
       return NextResponse.json(
-        { 
-          error: 'OpenAI API error', 
-          details: openaiError.message || 'Unknown error'
-        },
+        { ok: false, error: errorMessage },
         { status: 500 }
       )
     }
@@ -154,7 +176,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('GPT API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { ok: false, error: 'Internal server error', details: error.message },
       { status: 500 }
     )
   }

@@ -13,18 +13,6 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [chatId, setChatId] = useState<string | null>(null)
-  const [userId] = useState(() => {
-    // Generate a simple user ID for demo purposes
-    if (typeof window !== 'undefined') {
-      let id = localStorage.getItem('userId')
-      if (!id) {
-        id = `user-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
-        localStorage.setItem('userId', id)
-      }
-      return id
-    }
-    return 'anonymous'
-  })
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -61,15 +49,17 @@ export default function ChatInterface() {
         },
         body: JSON.stringify({
           message: userMessage,
-          userId: userId,
-          chatId: chatId,
-          isNewChat: !chatId
+          chatId: chatId
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
+        throw new Error(data.error || 'Failed to send message')
+      }
+
+      if (!data.ok) {
         throw new Error(data.error || 'Failed to send message')
       }
 
@@ -81,7 +71,7 @@ export default function ChatInterface() {
       // Add assistant response
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: data.message 
+        content: data.assistant.content
       }])
     } catch (err: any) {
       console.error('Chat error:', err)
