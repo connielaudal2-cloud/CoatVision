@@ -4,16 +4,18 @@ AI-powered coating analysis and chat assistant built with Next.js, Supabase, and
 
 ## Features
 
-- **Authentication**: Secure email/password authentication via Supabase Auth
+- **Authentication**: Secure email/password authentication via Supabase Auth with SSR
   - Sign up / Login pages
-  - Session management
+  - Cookie-based session management using @supabase/ssr
   - Auto-profile creation on first login
+  - No localStorage dependencies
 
 - **GPT Chat**: Interactive chat interface powered by OpenAI
   - Create new chats with "Ny chat" button
   - Messages are saved to Supabase database
   - Full chat history persistence
   - Real-time error handling with user-friendly messages
+  - Uses modern OpenAI models (gpt-4o-mini default)
 
 - **Image Analysis**: Automated coating defect detection
   - Upload images for analysis
@@ -42,17 +44,36 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Optional: OpenAI model (defaults to gpt-3.5-turbo)
-OPENAI_MODEL=gpt-3.5-turbo
+# Optional: OpenAI model (defaults to gpt-4o-mini)
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 ### Required Environment Variables:
 
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL (found in project settings)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key (found in project API settings)
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (found in project API settings) - **Server-side only, never expose to client**
-- `OPENAI_API_KEY`: Your OpenAI API key (get from https://platform.openai.com/api-keys) - **Server-side only, never exposed to client**
-- `OPENAI_MODEL` (optional): OpenAI model to use (defaults to `gpt-3.5-turbo`)
+- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL (found in project settings) - **Required**
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key (found in project API settings) - **Required**
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (found in project API settings) - **Server-side only, never expose to client** - **Required**
+- `OPENAI_API_KEY`: Your OpenAI API key (get from https://platform.openai.com/api-keys) - **Server-side only, never exposed to client** - **Required**
+- `OPENAI_MODEL` (optional): OpenAI model to use (defaults to `gpt-4o-mini`)
+
+**Important**: The application will fail with clear error messages if required environment variables are not set. No placeholder fallbacks are used in production.
+
+## Technical Architecture
+
+### Supabase SSR Integration
+
+This application uses `@supabase/ssr` for proper server-side rendering with cookie-based sessions:
+
+- **Browser Client** (`lib/supabase/browser.ts`): For client-side operations
+- **Server Client** (`lib/supabase/server.ts`): For server-side operations with cookie management
+- **Auth Utilities** (`lib/auth/server.ts`): Server-side authentication helpers
+
+### API Routes
+
+All API routes use cookie-based authentication:
+- User authentication is verified via `getUser()` from cookies
+- No `userId` is accepted from client requests
+- RLS policies are enforced with `auth.uid()`
 
 ## Database Setup
 

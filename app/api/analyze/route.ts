@@ -65,9 +65,19 @@ export async function POST(request: NextRequest) {
     // Ensure user profile exists
     await ensureProfile(user.id, user.email)
 
+    // Validate Supabase environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing Supabase environment variables')
+      return NextResponse.json(
+        { error: 'Database configuration error' },
+        { status: 500 }
+      )
+    }
+
     // Use service role key for database operations
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
 
     // Convert image to buffer

@@ -28,9 +28,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check OpenAI API key
+    // Check OpenAI API key - strict validation, no fallback
     const openaiKey = process.env.OPENAI_API_KEY
     if (!openaiKey) {
+      console.error('OPENAI_API_KEY environment variable is not set')
       return NextResponse.json(
         { ok: false, error: 'OpenAI API key is not configured. Please contact support.' },
         { status: 500 }
@@ -42,15 +43,25 @@ export async function POST(request: NextRequest) {
       apiKey: openaiKey
     })
 
-    // Get model from env or use default
-    const model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo'
+    // Get model from env or use modern default
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
 
     // Ensure user profile exists
     await ensureProfile(user.id, user.email)
 
+    // Validate Supabase environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing Supabase environment variables')
+      return NextResponse.json(
+        { ok: false, error: 'Database configuration error' },
+        { status: 500 }
+      )
+    }
+
     // Use service role key for database operations
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
 
     let currentChatId = chatId
